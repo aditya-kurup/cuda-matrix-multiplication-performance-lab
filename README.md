@@ -2,7 +2,7 @@
 
 An FP32, row-major matrix multiplication experiment with a one-output-per-thread CUDA kernel and a shared-memory tiled kernel. The focus is correctness and reproducible measurements on an NVIDIA GPU. The [static demo](docs/index.html) visualizes a small teaching example and reads measured JSON after a GPU run; it does not execute CUDA in the browser.
 
-This repository can be edited on an M4 MacBook Air. CUDA compilation, GPU tests, and measurements require a Linux runtime with an NVIDIA GPU, such as Google Colab. No measured results are included until that run happens.
+This repository can be edited on an M4 MacBook Air. CUDA compilation, GPU tests, and measurements require a Linux runtime with an NVIDIA GPU, such as Google Colab. One measured Tesla T4 run is included in [`docs/results/benchmark.json`](docs/results/benchmark.json).
 
 ## Project map
 
@@ -20,7 +20,7 @@ This repository can be edited on an M4 MacBook Air. CUDA compilation, GPU tests,
 1. Push this repository to a public GitHub repository. In Colab, open `notebooks/colab.ipynb` from GitHub (File → Open notebook → GitHub, then enter the repository URL), or upload the notebook.
 2. Select **Runtime → Change runtime type → GPU**. Run the notebook from top to bottom. Enter `https://github.com/OWNER/REPO` in its first code cell. The notebook checks `nvidia-smi`, `nvcc`, and CMake, clones or updates the repository, and prints the detected GPU and toolkit version.
 3. The next cells build the executable, run the deterministic correctness suite, run the short benchmark sweep, display measured values, and download `benchmark.json`. A failure stops the notebook; no benchmark file is written after a correctness failure.
-4. Add the downloaded file to this repository at `docs/results/benchmark.json`, commit it, and push. It is intentionally absent from the starter project. GitHub Pages will then display the real run.
+4. For a new run, replace `docs/results/benchmark.json` with the downloaded file, commit it, and push. GitHub Pages will display the new measurements.
 
 After a Colab reset, run all cells again. If the runtime has a GPU but lacks `nvcc`, select another GPU runtime or install a compatible CUDA toolkit following the current Colab/NVIDIA guidance, then rerun the build. The notebook reports the missing tool instead of skipping work. It does not assume a GPU model or toolkit version.
 
@@ -55,6 +55,20 @@ Inputs are deterministic FP32 values made by dividing small integers by 9, so ty
 The executable uses CUDA events in the default stream. Each measured action gets three warmups, then nine trials by default. It records each trial, median, minimum, and maximum. Kernel events surround only the kernel launch; they exclude host-to-device copies, device-to-host validation, CPU reference work, allocation, and most host launch overhead. Host-to-device transfer timing is reported separately using pinned host buffers and two asynchronous copies, A then B. Event timing of very short kernels can be noisy, so compare the spread, not only the median. The input data, sweep, tile size, block dimensions, warmups, and trial count are fixed or recorded.
 
 GFLOP/s uses `2*M*K*N / (median_ms * 1e6)`. The tiled/naive ratio uses their **measured** median times for the same shape. It is not a claim that tiling always wins. Launch and timing overhead matter most for small work; reuse has more opportunity to matter as K and output size grow. These are explanations of plausible effects, not profiler findings. Timings from different Colab GPUs or sessions should not be treated as controlled hardware comparisons.
+
+### Observed Tesla T4 run
+
+The included short sweep used CUDA 13.0, three warmups, and nine trials per kernel. All **benchmark shapes** passed the stated per-element tolerance. This JSON does not contain the separate small-case correctness-suite output.
+
+| M × K × N | Naive median (ms) | Tiled median (ms) | Tiled / naive |
+| --- | ---: | ---: | ---: |
+| 64 × 64 × 64 | 0.00698 | 0.00755 | 0.924× |
+| 128 × 128 × 128 | 0.01802 | 0.01363 | 1.322× |
+| 256 × 256 × 256 | 0.07987 | 0.05530 | 1.444× |
+| 127 × 65 × 191 | 0.01216 | 0.01229 | 0.990× |
+| 256 × 128 × 384 | 0.06157 | 0.04256 | 1.447× |
+
+The tiled median was lower on three shapes. The 127 × 65 × 191 medians differ by about 1%, and their trial ranges overlap, so this run does not establish a stable winner there. The largest recorded absolute error was about `1.05e-5`; the maximum relative metric reached about `2.0` near zero-valued references, where the mixed absolute/relative pass criterion is more informative. No profiler metrics were collected.
 
 ### JSON format (`schema_version: 1`)
 
@@ -91,9 +105,9 @@ clang++ -std=c++17 -Wall -Wextra -Wpedantic -Iinclude tests/reference_test.cpp -
 /tmp/matmul_reference_test
 ```
 
-CUDA CMake configuration will fail on macOS without NVIDIA CUDA; use Colab for it. Preview the Pages site from the repository root with `python3 -m http.server 8000`, then open `http://localhost:8000/docs/`. Without JSON, it correctly says “Benchmarks pending a GPU run.” After copying real JSON into `docs/results/`, reload the page to inspect the chart. The site uses relative asset and data URLs, so it works under a GitHub Pages repository subpath.
+CUDA CMake configuration will fail on macOS without NVIDIA CUDA; use Colab for it. Preview the Pages site from the repository root with `python3 -m http.server 8000`, then open `http://localhost:8000/docs/`. It reads the included benchmark JSON. If JSON is absent, it says “Benchmarks pending a GPU run.” The site uses relative asset and data URLs, so it works under a GitHub Pages repository subpath.
 
-To publish, push the repository to GitHub. In **Settings → Pages**, select **Deploy from a branch**, branch **main**, folder **/docs**, then save. Wait for GitHub's deployment, and visit `https://OWNER.github.io/REPO/`. After the Colab run, commit and push `docs/results/benchmark.json`; Pages will redeploy with the measured results. Source links on the public site resolve to the repository's `main` branch.
+To publish, in **Settings → Pages**, select **Deploy from a branch**, branch **main**, folder **/docs**, then save. Wait for GitHub's deployment, and visit `https://aditya-kurup.github.io/cuda-matrix-multiplication-performance-lab/`. Later JSON updates will redeploy with the measured results. Source links on the public site resolve to the repository's `main` branch.
 
 ## Interview walkthrough
 

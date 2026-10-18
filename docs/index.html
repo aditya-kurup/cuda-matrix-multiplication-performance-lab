@@ -73,6 +73,7 @@
         <div class="result-summary"><div><span class="metric-label">GPU</span><strong id="gpu-name">—</strong></div><div><span class="metric-label">Trials per kernel</span><strong id="trial-count">—</strong></div><div><span class="metric-label">Correctness</span><strong id="correctness-status">—</strong></div><div><span class="metric-label">Timing method</span><strong>CUDA events</strong></div></div>
         <div class="chart-layout"><div class="chart" id="timing-chart" aria-label="Measured kernel times"></div><div class="comparison"><span class="metric-label">Tiled / naive</span><strong id="speedup-value">—</strong><p id="comparison-text"></p><div class="transfer-line">Pinned-host H2D median <strong id="transfer-time">—</strong></div></div></div>
         <div id="details-table" class="details-table"></div>
+        <p id="run-observation" class="run-observation"></p>
         <p class="small-note">Kernel timings exclude host-to-device copies and CPU reference work. Range is the minimum to maximum trial time. GFLOP/s = 2MNK ÷ kernel seconds ÷ 10⁹.</p>
       </div>
     </div></section>

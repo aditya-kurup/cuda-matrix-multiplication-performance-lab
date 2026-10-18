@@ -120,7 +120,8 @@
     $('run-date').textContent = data.generated_at_utc ? `Run: ${data.generated_at_utc.replace('T',' ').replace('Z',' UTC')}` : '';
     const ratio = naive.timing.median_ms / tiled.timing.median_ms;
     $('speedup-value').textContent = `${format(ratio, 2)}×`;
-    $('comparison-text').textContent = ratio >= 1 ? 'Tiled kernel relative to naive, measured on this shape.' : 'Tiled kernel is slower on this shape.';
+    const difference = 100 * Math.abs(tiled.timing.median_ms - naive.timing.median_ms) / naive.timing.median_ms;
+    $('comparison-text').textContent = `Tiled median was ${format(difference, 1)}% ${ratio >= 1 ? 'lower' : 'higher'} than naive on this shape.`;
     const chart = $('timing-chart');
     chart.replaceChildren();
     const heading = document.createElement('p');
@@ -175,6 +176,12 @@
         select.appendChild(option);
       });
       select.addEventListener('change', () => showShape(data, Number(select.value)));
+      const tiledLower = data.results.filter((shape) => {
+        const naive = shape.kernels.find((kernel) => kernel.name === 'naive');
+        const tiled = shape.kernels.find((kernel) => kernel.name === 'tiled');
+        return tiled.timing.median_ms < naive.timing.median_ms;
+      }).length;
+      $('run-observation').textContent = `Across this ${data.environment.gpu_name} run, tiled had a lower median on ${tiledLower} of ${data.results.length} shapes. Near-equal medians should be read alongside their trial ranges.`;
       $('pending').hidden = true;
       $('result-content').hidden = false;
       showShape(data, 0);
