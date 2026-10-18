@@ -1,0 +1,16 @@
+/build/
+/cmake-build-*/
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.ncu-rep
+*.nsys-rep
+*.qdrep
+*.sqlite
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+.env
+.env.*

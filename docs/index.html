@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101c20">
+  <title>CUDA Matrix Multiplication Performance Lab</title>
+  <meta name="description" content="An inspectable CUDA matrix multiplication experiment: correctness, measured timings, and an educational tile visualization.">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">×</span><span>CUDA <strong>MatMul Lab</strong></span></a>
+      <nav aria-label="Primary navigation">
+        <a href="#explorer">Explorer</a><a href="#results">Measurements</a><a href="#method">Method</a>
+        <a class="source-link" data-source="src/main.cu" href="#source">Source ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="intro band-dark">
+      <div class="wrap intro-grid">
+        <div>
+          <p class="eyebrow">CUDA / FP32 / ROW MAJOR</p>
+          <h1>Matrix multiplication<br><span>performance lab.</span></h1>
+          <p class="intro-copy">Two CUDA kernels, the same multiplication. Inspect how memory access changes, then compare measured times from an NVIDIA GPU run.</p>
+          <div class="intro-actions"><a class="button primary" href="#explorer">Explore the kernels <span aria-hidden="true">↓</span></a><a class="button ghost" href="#results">View measurements</a></div>
+        </div>
+        <div class="formula" aria-label="Matrix dimensions: A M by K, B K by N, C M by N">
+          <div><span class="formula-letter a">A</span><span class="formula-dim">M × K</span></div>
+          <span class="formula-op">×</span>
+          <div><span class="formula-letter b">B</span><span class="formula-dim">K × N</span></div>
+          <span class="formula-op">=</span>
+          <div><span class="formula-letter c">C</span><span class="formula-dim">M × N</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="explorer wrap section" id="explorer">
+      <div class="section-heading">
+        <div><p class="eyebrow">01 / MEMORY ACCESS</p><h2>Follow one output through the work</h2></div>
+        <p class="section-note">Educational browser visualization. CUDA does not run on this page.</p>
+      </div>
+      <div class="explorer-controls">
+        <div class="segmented" role="group" aria-label="Kernel visualization mode">
+          <button id="mode-naive" class="active" type="button" aria-pressed="true">Naive kernel</button>
+          <button id="mode-tiled" type="button" aria-pressed="false">Tiled kernel</button>
+        </div>
+        <div class="step-controls"><button id="previous-step" type="button" title="Previous step" aria-label="Previous step">←</button><span id="step-count" aria-live="polite">1 / 4</span><button id="next-step" type="button" title="Next step" aria-label="Next step">→</button></div>
+      </div>
+      <div class="matrix-stage">
+        <div class="matrix-block"><div class="matrix-label"><strong>A</strong><span>4 × 4</span></div><div id="matrix-a" class="matrix-grid" aria-label="Matrix A"></div></div>
+        <span class="stage-operator" aria-hidden="true">×</span>
+        <div class="matrix-block"><div class="matrix-label"><strong>B</strong><span>4 × 4</span></div><div id="matrix-b" class="matrix-grid" aria-label="Matrix B"></div></div>
+        <span class="stage-operator" aria-hidden="true">=</span>
+        <div class="matrix-block"><div class="matrix-label"><strong>C</strong><span>select an output cell</span></div><div id="matrix-c" class="matrix-grid interactive" aria-label="Select an output cell in matrix C"></div></div>
+      </div>
+      <div class="visual-detail">
+        <div><p class="detail-kicker" id="visual-phase">NAIVE / INNER INDEX 0</p><p id="visual-explanation" class="visual-explanation" aria-live="polite"></p></div>
+        <div id="shared-panel" class="shared-panel" hidden><div class="shared-label">SHARED MEMORY / ONE 2 × 2 BLOCK</div><div class="shared-grids"><div><span>A tile</span><div id="shared-a" class="mini-grid"></div></div><div><span>B tile</span><div id="shared-b" class="mini-grid"></div></div></div></div>
+      </div>
+      <p class="small-note">Click a cell in C to move the thread. The 2 × 2 tile is a small teaching model; the CUDA kernel uses 16 × 16 tiles.</p>
+    </section>
+
+    <section class="results-band" id="results"><div class="wrap section">
+      <div class="section-heading"><div><p class="eyebrow">02 / REAL GPU RUN</p><h2>Measured results</h2></div><p class="section-note">Loaded from <code>results/benchmark.json</code> after a Colab run.</p></div>
+      <div id="pending" class="pending" role="status"><span class="pending-indicator" aria-hidden="true"></span><div><strong>Benchmarks pending a GPU run.</strong><p>Run the Colab notebook, then publish its JSON to <code>docs/results/benchmark.json</code>.</p></div></div>
+      <div id="result-content" hidden>
+        <div class="result-toolbar"><label for="shape-select">Matrix shape</label><select id="shape-select"></select><span id="run-date" class="run-date"></span></div>
+        <div class="result-summary"><div><span class="metric-label">GPU</span><strong id="gpu-name">—</strong></div><div><span class="metric-label">Trials per kernel</span><strong id="trial-count">—</strong></div><div><span class="metric-label">Correctness</span><strong id="correctness-status">—</strong></div><div><span class="metric-label">Timing method</span><strong>CUDA events</strong></div></div>
+        <div class="chart-layout"><div class="chart" id="timing-chart" aria-label="Measured kernel times"></div><div class="comparison"><span class="metric-label">Tiled / naive</span><strong id="speedup-value">—</strong><p id="comparison-text"></p><div class="transfer-line">Pinned-host H2D median <strong id="transfer-time">—</strong></div></div></div>
+        <div id="details-table" class="details-table"></div>
+        <p class="small-note">Kernel timings exclude host-to-device copies and CPU reference work. Range is the minimum to maximum trial time. GFLOP/s = 2MNK ÷ kernel seconds ÷ 10⁹.</p>
+      </div>
+    </div></section>
+
+    <section class="wrap section method" id="method">
+      <div class="section-heading"><div><p class="eyebrow">03 / INTERPRETATION</p><h2>What the experiment shows</h2></div></div>
+      <div class="method-grid">
+        <article><span class="method-number">01</span><h3>Naive</h3><p>One thread computes one C element. It walks K and reads one A value and one B value per multiply. Neighboring outputs may request the same values from global memory.</p></article>
+        <article><span class="method-number">02</span><h3>Tiled</h3><p>A 16 × 16 block cooperatively loads A and B tiles into shared memory. Threads reuse those values for a K segment, with barriers before use and before overwriting the tiles.</p></article>
+        <article><span class="method-number">03</span><h3>Trust</h3><p>Both outputs are checked against a deterministic CPU reference that accumulates in double precision. Every element must meet an FP32 mixed absolute/relative tolerance, including boundary tiles.</p></article>
+      </div>
+      <div class="interpretation"><h3>Reading the numbers</h3><p>Small shapes can be dominated by launch and measurement overhead. Larger shapes offer more opportunities for tile reuse, but the observed winner depends on the GPU and matrix shape. CUDA-event timings alone do not identify cache behavior, occupancy, or a hardware bottleneck; optional Nsight Compute profiling can investigate those separately.</p></div>
+      <div class="source-strip" id="source"><span>Inspect the implementation</span><div><a class="source-link" data-source="src/main.cu" href="#source">CUDA source ↗</a><a class="source-link" data-source="include/reference.hpp" href="#source">CPU reference ↗</a><a class="source-link" data-source="notebooks/colab.ipynb" href="#source">Colab notebook ↗</a><a class="source-link" data-source="README.md" href="#source">Run guide ↗</a></div></div>
+    </section>
+  </main>
+  <footer><div class="wrap footer-inner"><span>CUDA Matrix Multiplication Performance Lab</span><span>Educational visualization + reproducible GPU measurements</span></div></footer>
+</body>
+</html>
